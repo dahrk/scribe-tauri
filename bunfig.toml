@@ -1,0 +1,7 @@
+# Bun configuration for Scribe
+# Bun is used as the package manager and script runner.
+# Tauri 2 supports Bun natively; the CLI is invoked via `bunx tauri`.
+
+[install]
+# Prefer exact versions from bun.lockb
+exact = false

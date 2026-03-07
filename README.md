@@ -78,14 +78,14 @@ if the device isn't detected automatically, select it manually in Settings.
 ```bash
 git clone <repo-url>
 cd scribe-tauri
-npm install
-npm run tauri dev
+bun install
+bun run tauri dev
 ```
 
 ### Production build
 
 ```bash
-npm run tauri build
+bun run tauri build
 # Output: src-tauri/target/release/bundle/
 ```
 
@@ -197,8 +197,8 @@ activity detection. Click **Stop** to end it.
 ### Run tests
 
 ```bash
-npm test              # frontend (Vitest, 48 tests)
-npm run test:coverage # with coverage report
+bun run test              # frontend (Vitest, 48 tests)
+bun run test:coverage # with coverage report
 
 cd src-tauri
 cargo test            # Rust unit tests (72 tests, needs system libs)

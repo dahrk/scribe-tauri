@@ -13,8 +13,8 @@
 ## Test execution
 
 ```bash
-npm test                  # frontend (48 tests, ~8s)
-npm run test:coverage     # frontend with coverage report
+bun run test                  # frontend (48 tests, ~8s)
+bun run test:coverage     # frontend with coverage report
 
 # Rust (requires system libs on Linux):
 cd src-tauri && cargo test

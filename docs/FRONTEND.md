@@ -5,7 +5,8 @@
 | Layer | Technology |
 |---|---|
 | Framework | React 19 + TypeScript |
-| Build | Vite 7 |
+| Package manager | Bun 1 |
+| Build | Vite 7 (via `bun run build`) |
 | IPC | `@tauri-apps/api/core` (`invoke`) |
 | Events | `@tauri-apps/api/event` (`listen`) |
 | Styling | Plain CSS (BEM naming) in `App.css` |

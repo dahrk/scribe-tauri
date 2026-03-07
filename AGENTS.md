@@ -53,7 +53,7 @@ Key modules:
 python scripts/parakeet_server.py --model parakeet-tdt-0.6b-v2 --port 9000
 
 # 2. Start the Tauri dev server
-npm install && npm run tauri dev
+bun install && bun run tauri dev
 ```
 
 → Full setup: [README.md](README.md)
@@ -64,7 +64,7 @@ npm install && npm run tauri dev
 ## Running tests
 
 ```bash
-npm test                         # 48 frontend tests
+bun run test                         # 48 frontend tests
 cd src-tauri && cargo test       # 72 Rust unit tests (needs system libs)
 ```
 
