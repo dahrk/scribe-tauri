@@ -1,0 +1,52 @@
+Scribe Tauri IPC Commands – Quick Reference for LLMs
+======================================================
+
+All commands are async Rust functions in src-tauri/src/commands.rs.
+Called from the frontend via: invoke("command_name", { ...args })
+
+RECORDING
+---------
+start_recording()
+  → ()
+  Manually starts a recording. Ignored if already recording.
+
+stop_recording()
+  → ()
+  Manually stops the current recording. Triggers transcription + summarization.
+
+get_recorder_status()
+  → RecorderStatus { is_recording: bool, recording_id: String|null, transcript_preview: String }
+
+DATABASE
+--------
+list_recordings()
+  → Recording[]
+  All recordings, newest first.
+
+get_recording(id: String)
+  → Recording | null
+
+update_recording(id: String, title?: String, transcript?: String, summary?: String)
+  → ()
+
+delete_recording(id: String)
+  → ()
+
+retry_summary(id: String)
+  → ()
+  Re-runs summarization for a recording using the current backend config.
+
+SETTINGS
+--------
+get_settings()
+  → Settings
+
+save_settings(newSettings: Settings)
+  → ()
+
+EVENTS (backend → frontend)
+----------------------------
+recorder-status     payload: RecorderStatus         Every 1s tick
+recording-started   payload: String (id)            New row inserted
+recording-stopped   payload: String (id)            Recording finalised
+settings-changed    payload: Settings               Tray auto-record toggled

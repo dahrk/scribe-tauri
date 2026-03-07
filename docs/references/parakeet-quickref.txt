@@ -1,0 +1,34 @@
+NVIDIA Parakeet v3 – Quick Reference for LLMs
+==============================================
+
+MODEL VARIANTS
+--------------
+parakeet-tdt-0.6b-v2   Default. Token-and-Duration Transducer. 0.6B params.
+parakeet-tdt-1.1b      Higher accuracy. 1.1B params. More VRAM required.
+parakeet-ctc-0.6b      CTC variant. No timestamps. 0.6B params.
+
+INSTALL
+-------
+pip install "nemo_toolkit[asr]" fastapi uvicorn
+
+START SERVER
+------------
+python scripts/parakeet_server.py --model parakeet-tdt-0.6b-v2 --port 9000
+
+HTTP CONTRACT
+-------------
+POST http://127.0.0.1:9000/transcribe
+  Content-Type: audio/wav
+  Body: raw WAV bytes
+
+Response: {"text": "transcribed text here"}
+
+GET http://127.0.0.1:9000/health
+Response: {"status": "ok", "model": "parakeet-tdt-0.6b-v2"}
+
+NOTES
+-----
+- Model loads on CUDA if available; falls back to CPU (slow).
+- Input audio is resampled by NeMo – any sample rate is accepted.
+- English-only. For other languages use a multilingual model.
+- The /transcribe endpoint is called per segment (~60 s of audio by default).
