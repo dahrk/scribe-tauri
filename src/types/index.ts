@@ -10,6 +10,7 @@ export interface Recording {
 }
 
 export type AsrBackend =
+  | { Parakeet: { url: string; model: string } }
   | { WhisperCli: { bin: string; model: string } }
   | { HttpServer: { url: string } }
   | "None";

@@ -8,7 +8,9 @@ const DEFAULT_SETTINGS: Settings = {
   segment_interval_secs: 60,
   activity_threshold_dbfs: -40,
   min_active_windows: 3,
-  asr_backend: "None",
+  asr_backend: {
+    Parakeet: { url: "http://127.0.0.1:9000", model: "parakeet-tdt-0.6b-v2" },
+  },
   summarization_backend: {
     Ollama: { base_url: "http://localhost:11434", model: "llama3.2:3b" },
   },
@@ -16,6 +18,7 @@ const DEFAULT_SETTINGS: Settings = {
 
 function asrBackendType(b: AsrBackend): string {
   if (b === "None") return "none";
+  if ("Parakeet" in b) return "parakeet";
   if ("WhisperCli" in b) return "whisper";
   if ("HttpServer" in b) return "http";
   return "none";
@@ -136,6 +139,10 @@ export function SettingsPanel() {
             onChange={(e) => {
               const v = e.target.value;
               if (v === "none") setField("asr_backend", "None");
+              else if (v === "parakeet")
+                setField("asr_backend", {
+                  Parakeet: { url: "http://127.0.0.1:9000", model: "parakeet-tdt-0.6b-v2" },
+                });
               else if (v === "whisper")
                 setField("asr_backend", {
                   WhisperCli: { bin: "whisper", model: "base" },
@@ -144,11 +151,53 @@ export function SettingsPanel() {
                 setField("asr_backend", { HttpServer: { url: "http://localhost:9000/transcribe" } });
             }}
           >
-            <option value="none">None (disabled)</option>
-            <option value="whisper">Whisper CLI</option>
+            <option value="parakeet">Parakeet v3 (recommended)</option>
+            <option value="whisper">Whisper CLI (fallback)</option>
             <option value="http">HTTP server</option>
+            <option value="none">None (disabled)</option>
           </select>
         </label>
+
+        {asrType === "parakeet" && "Parakeet" in settings.asr_backend && (
+          <>
+            <label className="settings__row">
+              <span>Server URL</span>
+              <input
+                type="text"
+                value={(settings.asr_backend as any).Parakeet.url}
+                onChange={(e) =>
+                  setField("asr_backend", {
+                    Parakeet: {
+                      ...(settings.asr_backend as any).Parakeet,
+                      url: e.target.value,
+                    },
+                  })
+                }
+              />
+            </label>
+            <label className="settings__row">
+              <span>Model</span>
+              <select
+                value={(settings.asr_backend as any).Parakeet.model}
+                onChange={(e) =>
+                  setField("asr_backend", {
+                    Parakeet: {
+                      ...(settings.asr_backend as any).Parakeet,
+                      model: e.target.value,
+                    },
+                  })
+                }
+              >
+                <option value="parakeet-tdt-0.6b-v2">parakeet-tdt-0.6b-v2 (recommended)</option>
+                <option value="parakeet-tdt-1.1b">parakeet-tdt-1.1b</option>
+                <option value="parakeet-ctc-0.6b">parakeet-ctc-0.6b</option>
+              </select>
+            </label>
+            <p className="text-muted settings__hint">
+              Start the server: <code>python scripts/parakeet_server.py</code>
+            </p>
+          </>
+        )}
 
         {asrType === "whisper" && "WhisperCli" in settings.asr_backend && (
           <>
@@ -205,11 +254,9 @@ export function SettingsPanel() {
 
         {asrType === "none" && (
           <p className="text-muted settings__hint">
-            Transcription is disabled. Install{" "}
-            <a href="https://github.com/openai/whisper" target="_blank" rel="noreferrer">
-              Whisper
-            </a>{" "}
-            and set its path above, or run a local HTTP ASR server.
+            Transcription is disabled. Run{" "}
+            <code>python scripts/parakeet_server.py</code> and select Parakeet,
+            or install Whisper CLI as a fallback.
           </p>
         )}
       </section>

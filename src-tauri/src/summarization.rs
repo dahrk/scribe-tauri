@@ -138,3 +138,98 @@ async fn summarize_openai_compat(
             .to_string(),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Default / None ────────────────────────────────────────────────────────
+
+    #[test]
+    fn default_backend_is_ollama() {
+        assert!(matches!(
+            SummarizationBackend::default(),
+            SummarizationBackend::Ollama { .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn none_backend_returns_none() {
+        let r = summarize("hello world", &SummarizationBackend::None).await;
+        assert!(r.is_none());
+    }
+
+    #[tokio::test]
+    async fn empty_transcript_returns_none() {
+        let r = summarize("   ", &SummarizationBackend::default()).await;
+        assert!(r.is_none());
+    }
+
+    // ── Serialization ─────────────────────────────────────────────────────────
+
+    #[test]
+    fn ollama_roundtrip() {
+        let b = SummarizationBackend::Ollama {
+            base_url: "http://localhost:11434".into(),
+            model: "llama3.2:3b".into(),
+        };
+        let json = serde_json::to_string(&b).expect("serialize");
+        let b2: SummarizationBackend = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(b, b2);
+    }
+
+    #[test]
+    fn openai_compat_roundtrip_with_key() {
+        let b = SummarizationBackend::OpenAiCompatible {
+            base_url: "http://localhost:8080/v1".into(),
+            model: "phi3:mini".into(),
+            api_key: Some("secret".into()),
+        };
+        let json = serde_json::to_string(&b).expect("serialize");
+        let b2: SummarizationBackend = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(b, b2);
+    }
+
+    #[test]
+    fn openai_compat_roundtrip_without_key() {
+        let b = SummarizationBackend::OpenAiCompatible {
+            base_url: "http://localhost:8080/v1".into(),
+            model: "phi3:mini".into(),
+            api_key: None,
+        };
+        let json = serde_json::to_string(&b).expect("serialize");
+        let b2: SummarizationBackend = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(b, b2);
+    }
+
+    #[test]
+    fn none_roundtrip() {
+        let b = SummarizationBackend::None;
+        let json = serde_json::to_string(&b).expect("serialize");
+        let b2: SummarizationBackend = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(b, b2);
+    }
+
+    // ── Network failures return None gracefully ───────────────────────────────
+
+    #[tokio::test]
+    async fn ollama_returns_none_when_server_down() {
+        let b = SummarizationBackend::Ollama {
+            base_url: "http://127.0.0.1:19998".into(),
+            model: "llama3.2:3b".into(),
+        };
+        let r = summarize("Some meeting transcript", &b).await;
+        assert!(r.is_none());
+    }
+
+    #[tokio::test]
+    async fn openai_compat_returns_none_when_server_down() {
+        let b = SummarizationBackend::OpenAiCompatible {
+            base_url: "http://127.0.0.1:19997/v1".into(),
+            model: "phi3".into(),
+            api_key: None,
+        };
+        let r = summarize("Some meeting transcript", &b).await;
+        assert!(r.is_none());
+    }
+}

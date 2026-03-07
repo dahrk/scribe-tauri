@@ -114,3 +114,133 @@ impl ActivityDetector {
         self.config = config;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_det(threshold: f32, min_active: u32, min_idle: u32) -> ActivityDetector {
+        ActivityDetector::new(ActivityConfig {
+            threshold_dbfs: threshold,
+            min_active_windows: min_active,
+            min_idle_windows: min_idle,
+        })
+    }
+
+    /// Samples loud enough to pass -40 dB threshold.
+    fn loud() -> Vec<f32> {
+        vec![0.1f32; 160]
+    }
+
+    /// Samples quiet enough to be below -40 dB.
+    fn silent() -> Vec<f32> {
+        vec![0.0f32; 160]
+    }
+
+    // ── Idle → Starting → Active ─────────────────────────────────────────────
+
+    #[test]
+    fn starts_idle() {
+        let det = make_det(-40.0, 3, 5);
+        assert!(!det.is_active());
+    }
+
+    #[test]
+    fn single_loud_window_does_not_start() {
+        let mut det = make_det(-40.0, 3, 5);
+        let r = det.feed(&loud(), &loud());
+        assert!(r.is_none());
+        assert!(!det.is_active());
+    }
+
+    #[test]
+    fn reaches_active_after_min_windows() {
+        let mut det = make_det(-40.0, 3, 5);
+        // First two windows → Starting
+        assert!(det.feed(&loud(), &loud()).is_none());
+        assert!(det.feed(&loud(), &loud()).is_none());
+        // Third window → Active (returns Some(true))
+        let r = det.feed(&loud(), &loud());
+        assert_eq!(r, Some(true));
+        assert!(det.is_active());
+    }
+
+    #[test]
+    fn starting_resets_to_idle_on_quiet() {
+        let mut det = make_det(-40.0, 3, 5);
+        det.feed(&loud(), &loud()); // Starting { count: 1 }
+        let r = det.feed(&silent(), &silent()); // → Idle
+        assert!(r.is_none());
+        assert!(!det.is_active());
+    }
+
+    #[test]
+    fn only_mic_active_does_not_start() {
+        // spec: BOTH streams must be active
+        let mut det = make_det(-40.0, 3, 5);
+        for _ in 0..5 {
+            let r = det.feed(&loud(), &silent());
+            assert!(r.is_none());
+        }
+        assert!(!det.is_active());
+    }
+
+    // ── Active → Stopping → Idle ─────────────────────────────────────────────
+
+    #[test]
+    fn stops_after_min_idle_windows() {
+        let mut det = make_det(-40.0, 3, 3);
+        // Activate
+        det.feed(&loud(), &loud());
+        det.feed(&loud(), &loud());
+        det.feed(&loud(), &loud()); // → Active
+
+        // Two quiet windows → Stopping
+        det.feed(&silent(), &silent());
+        det.feed(&silent(), &silent());
+        // Third quiet window → Idle (returns Some(false))
+        let r = det.feed(&silent(), &silent());
+        assert_eq!(r, Some(false));
+        assert!(!det.is_active());
+    }
+
+    #[test]
+    fn stopping_returns_to_active_on_loud() {
+        let mut det = make_det(-40.0, 2, 3);
+        // Activate
+        det.feed(&loud(), &loud());
+        det.feed(&loud(), &loud()); // → Active
+        // Start stopping
+        det.feed(&silent(), &silent()); // Stopping { 1 }
+        // Loud again → back to Active, no stop event
+        let r = det.feed(&loud(), &loud());
+        assert!(r.is_none());
+        assert!(det.is_active());
+    }
+
+    // ── is_active covers both Active and Stopping ────────────────────────────
+
+    #[test]
+    fn is_active_true_during_stopping() {
+        let mut det = make_det(-40.0, 2, 5);
+        det.feed(&loud(), &loud());
+        det.feed(&loud(), &loud()); // → Active
+        det.feed(&silent(), &silent()); // → Stopping { 1 }
+        assert!(det.is_active()); // still "active" while counting down
+    }
+
+    // ── update_config ────────────────────────────────────────────────────────
+
+    #[test]
+    fn update_config_changes_threshold() {
+        let mut det = make_det(-40.0, 1, 1);
+        // With very high threshold nothing should trigger
+        det.update_config(ActivityConfig {
+            threshold_dbfs: 0.0, // 0 dBFS – nothing ever reaches this
+            min_active_windows: 1,
+            min_idle_windows: 1,
+        });
+        let r = det.feed(&loud(), &loud());
+        assert!(r.is_none());
+    }
+}
