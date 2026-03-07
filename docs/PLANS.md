@@ -4,7 +4,7 @@
 
 ### Now (v0.1 – shipped)
 - [x] Auto-detect meetings via dual-stream RMS gating
-- [x] Parakeet v3 HTTP ASR (primary) + Whisper CLI (fallback)
+- [x] Parakeet HTTP ASR (primary) + Whisper CLI (fallback)
 - [x] Ollama + OpenAI-compatible summarization
 - [x] SQLite recording storage (text only, no audio)
 - [x] Tray icon, system menu, auto-record toggle

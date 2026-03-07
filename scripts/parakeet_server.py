@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scribe – Parakeet v3 ASR HTTP server
+Scribe – Parakeet ASR HTTP server
 =====================================
 Loads the NVIDIA Parakeet TDT model once and serves transcription requests over
 HTTP so the Rust backend can call it without reloading the model on every segment.
@@ -42,7 +42,7 @@ _model_name = None
 
 
 def load_model(model_name: str):
-    """Load Parakeet v3 via NeMo ASR."""
+    """Load Parakeet via NeMo ASR."""
     try:
         import nemo.collections.asr as nemo_asr  # type: ignore
     except ImportError:
@@ -57,8 +57,6 @@ def load_model(model_name: str):
         "parakeet-tdt-0.6b-v2": "nvidia/parakeet-tdt-0.6b-v2",
         "parakeet-tdt-1.1b": "nvidia/parakeet-tdt-1.1b",
         "parakeet-ctc-0.6b": "nvidia/parakeet-ctc-0.6b",
-        # v3 alias – map to the latest release known at time of writing
-        "parakeet-v3": "nvidia/parakeet-tdt-0.6b-v2",
     }
     resolved = model_map.get(model_name, model_name)
     model = nemo_asr.models.ASRModel.from_pretrained(model_name=resolved)

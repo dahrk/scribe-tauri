@@ -151,7 +151,7 @@ export function SettingsPanel() {
                 setField("asr_backend", { HttpServer: { url: "http://localhost:9000/transcribe" } });
             }}
           >
-            <option value="parakeet">Parakeet v3 (recommended)</option>
+            <option value="parakeet">Parakeet (recommended)</option>
             <option value="whisper">Whisper CLI (fallback)</option>
             <option value="http">HTTP server</option>
             <option value="none">None (disabled)</option>

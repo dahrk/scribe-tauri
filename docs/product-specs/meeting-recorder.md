@@ -10,7 +10,7 @@ uploads, which is unacceptable for confidential business conversations.
 
 An always-on background app that:
 1. Detects when a meeting is in progress (both mic and system audio active).
-2. Transcribes locally using NVIDIA Parakeet v3 – no audio ever leaves the machine.
+2. Transcribes locally using NVIDIA Parakeet – no audio ever leaves the machine.
 3. Summarises the transcript with a local LLM (Ollama) into bullet-point action items.
 4. Stores only the text in a local SQLite database.
 5. Lets the user browse, edit, and search past recordings in a clean sidebar UI.

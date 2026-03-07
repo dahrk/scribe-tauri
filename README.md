@@ -2,7 +2,7 @@
 
 **Scribe** is a privacy-first meeting recorder for macOS and Linux. It runs in
 the background, detects when you're in a call, transcribes everything locally
-with NVIDIA Parakeet v3, and summarises the meeting with a local LLM. Your
+with NVIDIA Parakeet, and summarises the meeting with a local LLM. Your
 audio never leaves your machine.
 
 ---
@@ -12,7 +12,7 @@ audio never leaves your machine.
 - **Automatic detection** – starts recording when both your mic and system
   audio are active for several consecutive seconds; stops after a configurable
   period of silence.
-- **Local transcription** – NVIDIA Parakeet v3 (TDT) via a local Python
+- **Local transcription** – NVIDIA Parakeet (TDT) via a local Python
   server. Whisper CLI is available as a CPU fallback.
 - **Local summarization** – Ollama (default: `llama3.2:3b`) or any
   OpenAI-compatible endpoint running on your machine.
@@ -91,7 +91,7 @@ bun run tauri build
 
 ---
 
-## Setting up Parakeet v3 (recommended ASR)
+## Setting up Parakeet (recommended ASR)
 
 Parakeet is the primary transcription backend. It provides significantly
 better accuracy than Whisper at low latency on NVIDIA and Apple Silicon.

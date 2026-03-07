@@ -1,6 +1,6 @@
 # ASR Backend Design
 
-## Primary: NVIDIA Parakeet v3
+## Primary: NVIDIA Parakeet
 
 Parakeet TDT (Token-and-Duration Transducer) from NVIDIA NeMo delivers
 state-of-the-art accuracy at low latency on NVIDIA and Apple Silicon GPUs.

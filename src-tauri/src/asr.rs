@@ -7,7 +7,7 @@ use serde::Deserialize;
 /// `WhisperCli` is kept as a fallback for machines without a GPU.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub enum AsrBackend {
-    /// NVIDIA Parakeet v3 via the bundled `scripts/parakeet_server.py` HTTP server.
+    /// NVIDIA Parakeet via the bundled `scripts/parakeet_server.py` HTTP server.
     /// Accepts POST /transcribe with raw WAV bytes; returns `{"text":"…"}`.
     /// Default URL: http://127.0.0.1:9000
     Parakeet { url: String, model: String },

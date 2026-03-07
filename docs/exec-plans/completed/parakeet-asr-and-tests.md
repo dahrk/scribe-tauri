@@ -1,10 +1,10 @@
-# Completed: Parakeet v3 ASR + Comprehensive Tests
+# Completed: Parakeet ASR + Comprehensive Tests
 
 **Completed:** 2026-03-07
 
 ## Goal
 
-1. Switch the primary ASR backend from Whisper CLI to NVIDIA Parakeet v3.
+1. Switch the primary ASR backend from Whisper CLI to NVIDIA Parakeet.
 2. Add ≥90% unit test coverage across Rust logic modules and React frontend.
 3. Add AGENTS.md and structured docs/.
 

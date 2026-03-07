@@ -9,7 +9,7 @@
 ## What is Scribe?
 
 A Tauri 2 desktop app (macOS + Linux) that **auto-records meetings, transcribes
-locally with NVIDIA Parakeet v3, summarises with a local LLM, and stores only
+locally with NVIDIA Parakeet, summarises with a local LLM, and stores only
 text in SQLite**. Audio never leaves the machine.
 
 → Full user docs: [README.md](README.md)
