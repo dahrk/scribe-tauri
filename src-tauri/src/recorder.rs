@@ -29,6 +29,32 @@ pub enum RecorderCommand {
     UpdateSettings(Settings),
 }
 
+// ── Event emission abstraction ────────────────────────────────────────────────
+// Decouples the recorder loop from `tauri::AppHandle` so it can be driven by
+// a mock emitter in tests without requiring the full Tauri runtime.
+
+pub trait EventEmitter: Send + Sync + 'static {
+    fn emit_status(&self, status: RecordingStatus);
+    fn emit_started(&self, id: &str);
+    fn emit_stopped(&self, id: &str);
+}
+
+impl EventEmitter for AppHandle {
+    fn emit_status(&self, status: RecordingStatus) {
+        let _ = self.emit("recorder-status", status);
+    }
+
+    fn emit_started(&self, id: &str) {
+        let _ = self.emit("recording-started", id);
+    }
+
+    fn emit_stopped(&self, id: &str) {
+        let _ = self.emit("recording-stopped", id);
+    }
+}
+
+// ── Recorder state ────────────────────────────────────────────────────────────
+
 struct InProgress {
     id: String,
     started_at: chrono::DateTime<Utc>,
@@ -37,8 +63,8 @@ struct InProgress {
     audio_buf: Vec<f32>,
 }
 
-pub async fn run_recorder(
-    app: AppHandle,
+pub async fn run_recorder<E: EventEmitter>(
+    emitter: Arc<E>,
     db_conn: Arc<Mutex<Connection>>,
     initial_settings: Settings,
     mut cmd_rx: mpsc::Receiver<RecorderCommand>,
@@ -60,7 +86,11 @@ pub async fn run_recorder(
         Ok(e) => Some(Arc::new(e)),
         Err(err) => {
             log::warn!("Audio engine init failed: {err}. Activity detection disabled.");
-            emit_status(&app, false, None, "");
+            emitter.emit_status(RecordingStatus {
+                is_recording: false,
+                recording_id: None,
+                transcript_preview: String::new(),
+            });
             None
         }
     };
@@ -87,11 +117,11 @@ pub async fn run_recorder(
                     let transition = engine.as_ref().unwrap().activity.lock().feed(&mic, &sys);
                     match transition {
                         Some(true) if in_progress.is_none() => {
-                            in_progress = start_recording(&db_conn, &app);
+                            in_progress = start_recording(&db_conn, &*emitter);
                         }
                         Some(false) => {
                             if let Some(ip) = in_progress.take() {
-                                stop_recording(ip, &db_conn, &s.asr_backend, &s.summarization_backend, &app, sample_rate).await;
+                                stop_recording(ip, &db_conn, &s.asr_backend, &s.summarization_backend, &*emitter, sample_rate).await;
                             }
                         }
                         _ => {}
@@ -114,7 +144,11 @@ pub async fn run_recorder(
                                         ip.transcript.push(' ');
                                     }
                                     ip.transcript.push_str(&text);
-                                    emit_status(&app, true, Some(ip.id.clone()), &ip.transcript);
+                                    emitter.emit_status(RecordingStatus {
+                                        is_recording: true,
+                                        recording_id: Some(ip.id.clone()),
+                                        transcript_preview: ip.transcript.chars().take(200).collect(),
+                                    });
                                 }
                             }
                         }
@@ -127,7 +161,7 @@ pub async fn run_recorder(
                     None => break,
                     Some(RecorderCommand::StartManual) => {
                         if in_progress.is_none() {
-                            in_progress = start_recording(&db_conn, &app);
+                            in_progress = start_recording(&db_conn, &*emitter);
                             // Reset segmenter
                             if let Some(e) = &engine {
                                 e.segmenter.lock().reset();
@@ -137,7 +171,7 @@ pub async fn run_recorder(
                     Some(RecorderCommand::StopManual) => {
                         if let Some(ip) = in_progress.take() {
                             let s = settings.lock().clone();
-                            stop_recording(ip, &db_conn, &s.asr_backend, &s.summarization_backend, &app, sample_rate).await;
+                            stop_recording(ip, &db_conn, &s.asr_backend, &s.summarization_backend, &*emitter, sample_rate).await;
                         }
                     }
                     Some(RecorderCommand::UpdateSettings(new_settings)) => {
@@ -161,9 +195,9 @@ fn idle_windows(s: &Settings) -> u32 {
     (s.idle_timeout_secs).max(1.0) as u32
 }
 
-fn start_recording(
+pub(crate) fn start_recording(
     db_conn: &Arc<Mutex<Connection>>,
-    app: &AppHandle,
+    emitter: &dyn EventEmitter,
 ) -> Option<InProgress> {
     let started_at = Utc::now();
     let id = {
@@ -171,8 +205,12 @@ fn start_recording(
         db::insert_recording(&conn, &started_at).ok()?
     };
     log::info!("Recording started: {id}");
-    emit_status(app, true, Some(id.clone()), "");
-    app.emit("recording-started", id.clone()).ok();
+    emitter.emit_status(RecordingStatus {
+        is_recording: true,
+        recording_id: Some(id.clone()),
+        transcript_preview: String::new(),
+    });
+    emitter.emit_started(&id);
     Some(InProgress {
         id,
         started_at,
@@ -181,12 +219,12 @@ fn start_recording(
     })
 }
 
-async fn stop_recording(
+pub(crate) async fn stop_recording(
     mut ip: InProgress,
     db_conn: &Arc<Mutex<Connection>>,
     asr_backend: &AsrBackend,
     sum_backend: &SummarizationBackend,
-    app: &AppHandle,
+    emitter: &dyn EventEmitter,
     sample_rate: u32,
 ) {
     log::info!("Recording stopped: {}", ip.id);
@@ -221,17 +259,280 @@ async fn stop_recording(
         );
     }
 
-    emit_status(app, false, None, "");
-    app.emit("recording-stopped", ip.id.clone()).ok();
+    emitter.emit_status(RecordingStatus {
+        is_recording: false,
+        recording_id: None,
+        transcript_preview: String::new(),
+    });
+    emitter.emit_stopped(&ip.id);
 }
 
-fn emit_status(app: &AppHandle, is_recording: bool, id: Option<String>, preview: &str) {
-    let _ = app.emit(
-        "recorder-status",
-        RecordingStatus {
-            is_recording,
-            recording_id: id,
-            transcript_preview: preview.chars().take(200).collect(),
-        },
-    );
+// ── Convenience: construct recorder for the real app ─────────────────────────
+
+/// Wraps `run_recorder` to accept a `tauri::AppHandle` directly.
+/// Called from `lib.rs`.
+pub async fn run_recorder_with_app(
+    app: AppHandle,
+    db_conn: Arc<Mutex<Connection>>,
+    initial_settings: Settings,
+    cmd_rx: mpsc::Receiver<RecorderCommand>,
+) {
+    run_recorder(Arc::new(app), db_conn, initial_settings, cmd_rx).await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db;
+    use rusqlite::Connection;
+    use std::sync::Mutex as StdMutex;
+    use tokio::sync::mpsc;
+
+    // ── Mock emitter ──────────────────────────────────────────────────────────
+
+    #[derive(Debug)]
+    enum EmittedEvent {
+        Status(RecordingStatus),
+        Started(String),
+        Stopped(String),
+    }
+
+    struct MockEmitter {
+        events: StdMutex<Vec<EmittedEvent>>,
+    }
+
+    impl MockEmitter {
+        fn new() -> Self {
+            Self { events: StdMutex::new(Vec::new()) }
+        }
+
+        fn events(&self) -> Vec<String> {
+            self.events
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|e| format!("{e:?}"))
+                .collect()
+        }
+
+        fn has_started(&self) -> bool {
+            self.events
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|e| matches!(e, EmittedEvent::Started(_)))
+        }
+
+        fn has_stopped(&self) -> bool {
+            self.events
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|e| matches!(e, EmittedEvent::Stopped(_)))
+        }
+
+        fn recording_ids_started(&self) -> Vec<String> {
+            self.events
+                .lock()
+                .unwrap()
+                .iter()
+                .filter_map(|e| {
+                    if let EmittedEvent::Started(id) = e { Some(id.clone()) } else { None }
+                })
+                .collect()
+        }
+    }
+
+    impl EventEmitter for MockEmitter {
+        fn emit_status(&self, status: RecordingStatus) {
+            self.events.lock().unwrap().push(EmittedEvent::Status(status));
+        }
+
+        fn emit_started(&self, id: &str) {
+            self.events.lock().unwrap().push(EmittedEvent::Started(id.to_string()));
+        }
+
+        fn emit_stopped(&self, id: &str) {
+            self.events.lock().unwrap().push(EmittedEvent::Stopped(id.to_string()));
+        }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    fn in_memory_db() -> Arc<Mutex<Connection>> {
+        let conn = Connection::open_in_memory().expect("in-memory DB");
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS recordings (
+                id TEXT PRIMARY KEY NOT NULL,
+                title TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                ended_at TEXT,
+                transcript TEXT,
+                summary TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );",
+        )
+        .expect("create table");
+        Arc::new(Mutex::new(conn))
+    }
+
+    // ── start_recording ───────────────────────────────────────────────────────
+
+    #[test]
+    fn start_recording_inserts_db_row() {
+        let db = in_memory_db();
+        let emitter = MockEmitter::new();
+
+        let ip = start_recording(&db, &emitter);
+        assert!(ip.is_some(), "Should return InProgress");
+
+        let conn = db.lock();
+        let recordings = db::list_recordings(&conn).expect("list");
+        assert_eq!(recordings.len(), 1);
+    }
+
+    #[test]
+    fn start_recording_emits_status_and_started_events() {
+        let db = in_memory_db();
+        let emitter = MockEmitter::new();
+
+        let ip = start_recording(&db, &emitter).expect("InProgress");
+        assert!(emitter.has_started(), "Should emit Started event");
+
+        let ids = emitter.recording_ids_started();
+        assert_eq!(ids, vec![ip.id]);
+    }
+
+    #[test]
+    fn start_recording_returns_empty_transcript() {
+        let db = in_memory_db();
+        let emitter = MockEmitter::new();
+        let ip = start_recording(&db, &emitter).expect("InProgress");
+        assert!(ip.transcript.is_empty());
+        assert!(ip.audio_buf.is_empty());
+    }
+
+    // ── stop_recording ────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn stop_recording_finalizes_db_row() {
+        let db = in_memory_db();
+        let emitter = MockEmitter::new();
+
+        let ip = start_recording(&db, &emitter).expect("InProgress");
+        let id = ip.id.clone();
+
+        stop_recording(
+            ip,
+            &db,
+            &AsrBackend::None,
+            &crate::summarization::SummarizationBackend::None,
+            &emitter,
+            16_000,
+        )
+        .await;
+
+        let conn = db.lock();
+        let rec = db::get_recording(&conn, &id)
+            .expect("query ok")
+            .expect("record exists");
+        assert!(rec.ended_at.is_some(), "ended_at should be set");
+    }
+
+    #[tokio::test]
+    async fn stop_recording_emits_stopped_event() {
+        let db = in_memory_db();
+        let emitter = MockEmitter::new();
+
+        let ip = start_recording(&db, &emitter).expect("InProgress");
+        stop_recording(
+            ip,
+            &db,
+            &AsrBackend::None,
+            &crate::summarization::SummarizationBackend::None,
+            &emitter,
+            16_000,
+        )
+        .await;
+
+        assert!(emitter.has_stopped(), "Should emit Stopped event");
+    }
+
+    // ── run_recorder command channel ──────────────────────────────────────────
+
+    #[tokio::test]
+    async fn start_manual_command_creates_recording() {
+        let db = in_memory_db();
+        let emitter = Arc::new(MockEmitter::new());
+        let settings = Settings::default();
+        let (tx, rx) = mpsc::channel(8);
+
+        let db_clone = db.clone();
+        let em_clone = emitter.clone();
+        tokio::spawn(async move {
+            run_recorder(em_clone, db_clone, settings, rx).await;
+        });
+
+        tx.send(RecorderCommand::StartManual).await.expect("send");
+        // Give the loop time to process the command.
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let conn = db.lock();
+        assert_eq!(
+            db::list_recordings(&conn).expect("list").len(),
+            1,
+            "One recording should exist after StartManual"
+        );
+    }
+
+    #[tokio::test]
+    async fn stop_manual_command_finalizes_recording() {
+        let db = in_memory_db();
+        let emitter = Arc::new(MockEmitter::new());
+        let settings = Settings::default();
+        let (tx, rx) = mpsc::channel(8);
+
+        let db_clone = db.clone();
+        let em_clone = emitter.clone();
+        tokio::spawn(async move {
+            run_recorder(em_clone, db_clone, settings, rx).await;
+        });
+
+        tx.send(RecorderCommand::StartManual).await.expect("send start");
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        tx.send(RecorderCommand::StopManual).await.expect("send stop");
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        assert!(emitter.has_stopped(), "Should emit Stopped after StopManual");
+
+        let conn = db.lock();
+        let recs = db::list_recordings(&conn).expect("list");
+        assert_eq!(recs.len(), 1);
+        assert!(recs[0].ended_at.is_some(), "ended_at should be finalised");
+    }
+
+    #[tokio::test]
+    async fn update_settings_command_does_not_crash_without_engine() {
+        // When audio engine init fails (no hardware in CI), UpdateSettings
+        // should still be processed without panicking.
+        let db = in_memory_db();
+        let emitter = Arc::new(MockEmitter::new());
+        let mut settings = Settings::default();
+        settings.auto_record = false; // ensure engine path is skipped cleanly
+        let (tx, rx) = mpsc::channel(8);
+
+        tokio::spawn(async move {
+            run_recorder(emitter, db, settings, rx).await;
+        });
+
+        let mut new_settings = Settings::default();
+        new_settings.activity_threshold_dbfs = -50.0;
+        tx.send(RecorderCommand::UpdateSettings(new_settings))
+            .await
+            .expect("send");
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        // If we reach here without panic, the test passes.
+    }
 }

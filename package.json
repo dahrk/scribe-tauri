@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "tauri": "bunx tauri",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:integration": "vitest run src/test/integration"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -27,6 +30,7 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/ui": "^4.0.18",
     "jsdom": "^28.1.0",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
