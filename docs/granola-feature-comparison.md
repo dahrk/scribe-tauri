@@ -2,7 +2,7 @@
 
 > Generated: 2026-03-15
 > Purpose: identify parity gaps and prioritise implementation todos.
-> Granola sources: [granola.ai](https://www.granola.ai), [TechCrunch](https://techcrunch.com/2025/05/14/ai-note-taking-app-granola-raises-43m-at-250m-valuation-launches-collaborative-features/), [Zapier review](https://zapier.com/blog/granola-ai/), [bluedothq review](https://www.bluedothq.com/blog/granola-review), [granola pricing](https://www.granola.ai/pricing)
+> Granola sources: [granola.ai](https://www.granola.ai), [TechCrunch $43M raise](https://techcrunch.com/2025/05/14/ai-note-taking-app-granola-raises-43m-at-250m-valuation-launches-collaborative-features/), [Zapier review](https://zapier.com/blog/granola-ai/), [bluedothq review](https://www.bluedothq.com/blog/granola-review), [granola pricing](https://www.granola.ai/pricing), [tldv review](https://tldv.io/blog/granola-review/), [Granola 2.0 blog](https://www.granola.ai/blog/two-dot-zero), [Granola MCP](https://www.granola.ai/blog/granola-mcp)
 
 ---
 
@@ -25,15 +25,18 @@
 | Device-level audio capture (no bot joining call) | ✅ | ✅ | — |
 | Microphone capture | ✅ | ✅ | — |
 | System audio capture | ✅ | ✅ | — |
-| Automatic meeting detection (start/stop) | ✅ | ✅ | — |
+| In-person / room audio (mic only) | ✅ | ✅ | — |
+| Automatic meeting detection (start/stop) | ✅ | ✅ (via calendar) | — |
 | Manual start/stop | ✅ | ✅ | — |
 | Real-time / live transcript preview | ✅ (status bar) | ✅ | — |
 | Multiple ASR backends (Parakeet / Whisper / custom) | ✅ | ❌ (proprietary only) | — (Scribe advantage) |
 | Local-only transcription (no cloud ASR) | ✅ | ❌ (cloud transcription) | — (Scribe advantage) |
-| Multi-language transcription | 🚧 (planned) | ✅ | [ ] Add multilingual Parakeet variant |
-| Speaker diarisation (who said what) | 🚧 (planned) | ✅ | [ ] Add diarisation model integration |
+| Multi-language transcription (10+ languages, auto-detect) | 🚧 (planned) | ✅ | [ ] Add multilingual Parakeet variant; detect language |
+| Mid-call language switching | ❌ | ✅ | [ ] Depends on multilingual ASR |
+| Speaker diarisation (who said what) | 🚧 (planned) | ✅ (manual ID per meeting) | [ ] Add diarisation model; note: Granola requires manual name assignment |
 | Phone call recording (mobile outbound) | ❌ | ✅ (iOS app) | ❓ Out of scope? |
 | Transcription accuracy toggle / model size | ✅ | ❌ (no user control) | — (Scribe advantage) |
+| Audio never stored | ✅ | ✅ | — |
 
 ---
 
@@ -42,16 +45,20 @@
 | Feature | Scribe | Granola | Todo |
 |---------|--------|---------|------|
 | Automatic meeting summary | ✅ | ✅ | — |
-| Multiple LLM backends (Ollama / OpenAI-compat) | ✅ | ❌ (proprietary only) | — (Scribe advantage) |
+| Multiple LLM backends (Ollama / OpenAI-compat) | ✅ | ❌ (GPT-4o + Claude, proprietary) | — (Scribe advantage) |
 | Local LLM summarisation (Ollama) | ✅ | ❌ | — (Scribe advantage) |
 | Manual summary regeneration | ✅ | ❓ | — |
 | Hybrid human + AI notes (user writes, AI fills in) | ❌ | ✅ | [ ] Add in-meeting scratchpad that merges with transcript |
-| Meeting templates (sales call, 1:1, standup, etc.) | ❌ | ✅ | [ ] Implement per-meeting-type prompt templates in settings |
+| Visual distinction: user text vs AI text | ❌ | ✅ (gray = AI, black = user) | [ ] Render user-authored vs AI portions differently |
+| Meeting templates (sales call, 1:1, standup, etc.) | ❌ | ✅ (~29 built-in) | [ ] Implement per-meeting-type prompt templates in settings |
+| "Recipes" – slash-command AI transforms (Coach Me, Write a Brief, etc.) | ❌ | ✅ | [ ] Add `/recipe` command system in RecordingDetail |
 | Edit notes by natural language request ("make this shorter") | ❌ | ✅ | [ ] Add AI edit command in RecordingDetail |
 | Chat with notes / Q&A over transcript | ❌ | ✅ | [ ] Add chat panel backed by local LLM / OpenAI-compat |
 | Cross-meeting Q&A (query weeks of notes at once) | ❌ | ✅ | [ ] Vector-embed transcripts; add semantic search |
 | Glance at previous notes mid-meeting | ❌ | ✅ | [ ] Allow navigation to past recordings while recording active |
 | Action item / follow-up extraction | ❌ | ✅ (via templates) | [ ] Add action-item extraction to summary prompt |
+| Custom vocabulary / internal jargon for transcription accuracy | ❌ | ✅ | [ ] Add user-defined vocabulary hints passed to ASR |
+| AI coaching ("how did you show up in this meeting?") | ❌ | ✅ (Coach Me recipe) | [ ] Add as a built-in recipe once recipe system exists |
 
 ---
 
@@ -59,13 +66,18 @@
 
 | Feature | Scribe | Granola | Todo |
 |---------|--------|---------|------|
-| Local-only storage (no cloud) | ✅ | ❌ (cloud-synced) | — (Scribe advantage) |
-| Audio never persisted to disk | ✅ | ❓ | — |
+| Local-only storage (no cloud) | ✅ | ❌ (AWS cloud-synced) | — (Scribe advantage) |
+| Audio never persisted to disk | ✅ | ✅ (transcribed then discarded) | — |
 | SQLite text storage | ✅ | ❌ (proprietary cloud DB) | — |
 | User-controlled data directory | ✅ | ❌ | — (Scribe advantage) |
+| Works fully offline | ✅ | ❌ (requires internet) | — (Scribe advantage) |
+| SOC 2 Type 2 certification | ❌ | ✅ (since July 2025) | ❓ Relevant if Scribe adds cloud mode |
+| GDPR compliant | ❌ (self-hosted; N/A) | ✅ | ❓ |
+| HIPAA compliant | ❌ | ❌ (Granola not HIPAA either) | — |
 | Organisation-wide AI training opt-out | ❌ | ✅ (enterprise tier) | ❓ N/A if always local |
 | SSO / enterprise auth | ❌ | ✅ (enterprise) | ❓ Only needed if multi-user |
-| End-to-end encryption at rest | ❌ | ❓ | [ ] Encrypt SQLite at rest (SQLCipher) |
+| End-to-end encryption at rest | ❌ | ✅ (AWS encrypted at rest) | [ ] Encrypt SQLite at rest (SQLCipher) |
+| Daily encrypted backups | ❌ | ✅ (AWS) | ❓ User's responsibility when local |
 
 ---
 
@@ -91,11 +103,11 @@
 
 | Feature | Scribe | Granola | Todo |
 |---------|--------|---------|------|
-| Export to Markdown | 🚧 (planned v0.2) | ✅ | [ ] Implement `export_recording(id, Markdown)` |
-| Export to PDF | 🚧 (planned v0.2) | ✅ | [ ] Implement `export_recording(id, PDF)` |
-| Copy transcript / summary to clipboard | ❌ | ✅ | [ ] Add copy buttons to RecordingDetail |
+| Export to Markdown | 🚧 (planned v0.2) | ❌ (copy-paste only) | [ ] Implement `export_recording(id, Markdown)` — Scribe advantage once shipped |
+| Export to PDF | 🚧 (planned v0.2) | ❌ (copy-paste only) | [ ] Implement `export_recording(id, PDF)` — Scribe advantage once shipped |
+| Copy transcript / summary to clipboard | ❌ | ✅ (primary export path) | [ ] Add copy buttons to RecordingDetail |
 | Share notes via link (web-accessible) | ❌ | ✅ | ❓ Conflicts with local-only design |
-| Share with non-Granola users (chat w/ AI) | ❌ | ✅ | ❓ N/A — no server |
+| Non-Granola users can chat with shared note | ❌ | ✅ | ❓ N/A — no server |
 | Export to Notion | ❌ | ✅ | [ ] Add Notion export action (requires user API key) |
 | Send to Slack channel | ❌ | ✅ | [ ] Add Slack webhook action (optional) |
 
@@ -105,10 +117,13 @@
 
 | Feature | Scribe | Granola | Todo |
 |---------|--------|---------|------|
-| Calendar integration (Google / Outlook) | ❌ | ✅ | [ ] Read local calendar (CalDAV / Google API) to pre-fill meeting title & attendees |
+| Google Calendar integration | ❌ | ✅ | [ ] Read local calendar (CalDAV / Google API) to pre-fill meeting title & attendees |
+| Outlook / Microsoft 365 calendar | ❌ | ✅ (added 2026) | [ ] Same — CalDAV may cover both |
+| Auto-detect upcoming meeting and open notepad | ❌ | ✅ | [ ] Watch calendar; prompt user N minutes before event |
 | Auto-attach notes to calendar event | ❌ | ✅ | [ ] Link recordings to calendar event ID |
 | Meeting agenda pre-loaded before call | ❌ | ✅ | [ ] Pull agenda from calendar event description |
 | Attendee list from calendar event | ❌ | ✅ | [ ] Store attendees in DB; show in RecordingDetail |
+| Pre-meeting collaboration (drop agenda items before call) | ❌ | ✅ | [ ] Pre-meeting note editor linked to upcoming event |
 
 ---
 
@@ -195,11 +210,13 @@
 3. **Link sharing**: "Share notes via link" requires a server endpoint. Out of scope?
 4. **CRM integrations** (HubSpot, Salesforce): Worth building, or leave to webhook/MCP?
 5. **Zapier / webhook**: Granola triggers webhooks on meeting-complete. Scribe could do this with a configurable POST URL — is this wanted?
-6. **SQLite encryption** (SQLCipher): Granola has org-wide AI training opt-out for enterprise. Scribe's local model avoids this problem, but should the DB be encrypted at rest?
+6. **SQLite encryption** (SQLCipher): Should the local DB be encrypted at rest? Granola encrypts on AWS; Scribe users own the machine.
 7. **Windows support**: Granola supports Windows; Scribe currently does not. Is this a target platform?
 8. **Dark mode**: Does Scribe's current Tauri/React UI respect system theme?
-9. **Built-in contact tracker**: Granola has a lightweight "who did I meet with" view. Wanted in Scribe?
-10. **MCP server**: Expose Scribe's local recordings via MCP so Claude / ChatGPT can query them. Quick win?
+9. **Built-in contact tracker**: Granola has a "People & Companies" view (who I met, past notes by person). Wanted in Scribe?
+10. **MCP server**: Expose Scribe's local recordings via MCP so Claude / ChatGPT can query them. This seems like a quick win given Granola launched MCP in Feb 2026 and it's a differentiator.
+11. **Custom vocabulary**: Granola lets users add internal jargon / product names for better ASR accuracy. Worth adding to Scribe's ASR config?
+12. **In-meeting scratchpad (hybrid notes)**: Granola's defining UX — user types bullets mid-meeting, AI merges them with transcript after. Is this the UX direction for Scribe, or keep post-hoc summary only?
 
 ---
 
@@ -207,40 +224,55 @@
 
 ### Group A – Low-hanging fruit (no architecture changes)
 
-- [ ] Copy-to-clipboard buttons for transcript and summary
+These can be worked in parallel:
+
+- [ ] Copy-to-clipboard buttons for transcript and summary (Granola's primary export path)
 - [ ] SQLite FTS5 full-text search across recordings
-- [ ] Implement recording export: Markdown + PDF (already planned v0.2)
+- [ ] Implement recording export: Markdown + PDF (already planned v0.2; Scribe advantage — Granola has no native export)
 - [ ] Add pagination to `list_recordings` (TD-005)
 - [ ] Global keyboard shortcut for start/stop (already planned)
 - [ ] Manual audio device picker (TD-003)
 - [ ] Action item extraction in summary prompt
 - [ ] Dark/light mode verification and fix
+- [ ] Visual distinction: render AI-generated portions differently from user-written text
 
 ### Group B – Medium effort (self-contained features)
 
-- [ ] Per-meeting prompt templates (sales call, 1:1, standup, etc.)
+These can be worked in parallel:
+
+- [ ] Per-meeting prompt templates (sales call, 1:1, standup, etc. — ~29 in Granola)
+- [ ] Slash-command recipe system (`/coach-me`, `/write-brief`, etc.) in RecordingDetail
 - [ ] AI edit command: "make this shorter / more formal"
+- [ ] Custom vocabulary / internal jargon setting passed to ASR
 - [ ] Notion export action (user provides API key in settings)
 - [ ] Slack webhook post-meeting summary (opt-in setting)
 - [ ] Configurable generic webhook URL (POST on recording complete)
-- [ ] MCP server exposing local recordings (read-only)
+- [ ] MCP server exposing local recordings (read-only) — quick competitive differentiator
 - [ ] Calendar integration: read Google/CalDAV to pre-fill title + attendees
 - [ ] Folder / tag organisation in DB + UI
+- [ ] "People & Companies" view: group recordings by attendee name (depends on ❓ #9)
 
 ### Group C – Larger scope (significant effort)
 
+These can be worked in parallel:
+
 - [ ] Chat / Q&A panel backed by local LLM (in-meeting and post-meeting)
-- [ ] Cross-meeting semantic search (vector embeddings)
-- [ ] Speaker diarisation model integration
-- [ ] Multi-language transcription (multilingual Parakeet/Whisper)
-- [ ] In-meeting scratchpad that merges user notes + transcript (Granola's core UX)
-- [ ] First-run onboarding wizard
-- [ ] Windows platform support
+- [ ] Cross-meeting semantic search (vector embeddings + similarity query)
+- [ ] Speaker diarisation model integration (note: Granola still requires manual name assignment)
+- [ ] Multi-language transcription with auto-detect (multilingual Parakeet/Whisper)
+- [ ] Mid-call language switching support (depends on multilingual ASR)
+- [ ] In-meeting scratchpad that merges user notes + transcript (Granola's defining UX — see ❓ #12)
+- [ ] First-run onboarding wizard (ASR server setup, permissions walkthrough)
+- [ ] Windows platform support (WASAPI audio capture)
+- [ ] Glance at prior recordings mid-meeting without stopping transcription
 
 ### Group D – Needs product decision first (❓ items)
 
-- [ ] Optional cloud sync / server mode for team collaboration
-- [ ] iOS app
-- [ ] Link-sharing (requires server)
-- [ ] SQLite encryption at rest (SQLCipher)
-- [ ] Built-in contact/person tracker
+Blocked on answers to Open Questions above:
+
+- [ ] Optional cloud sync / server mode for team collaboration (❓ #1)
+- [ ] iOS app (❓ #2)
+- [ ] Link-sharing / shareable note URLs (❓ #3)
+- [ ] SQLite encryption at rest / SQLCipher (❓ #6)
+- [ ] Built-in contact/person tracker (❓ #9)
+- [ ] Hybrid in-meeting notes UX (❓ #12)
