@@ -64,9 +64,20 @@ bun install && bun run tauri dev
 ## Running tests
 
 ```bash
-bun run test                         # 48 frontend tests
-cd src-tauri && cargo test       # 72 Rust unit tests (needs system libs)
+bun run test                         # 65 frontend tests (unit + integration)
+bun run test:integration             # integration tests only (App, recorder-flow)
+cd src-tauri && cargo test       # Rust unit tests + 13 integration tests (needs system libs)
 ```
+
+Test helpers and integration suites:
+
+| Path | Role |
+|---|---|
+| `src/test/helpers/ipc.ts` | Typed `setupInvoke()` / `setupListen()` IPC helpers |
+| `src/test/helpers/render.tsx` | `renderWithProviders()` wrapper for React tests |
+| `src/test/integration/App.test.tsx` | 12 full-`<App />` integration tests |
+| `src/test/integration/recorder-flow.test.ts` | 5 Idle→Recording→Idle state-machine tests |
+| `src-tauri/tests/integration.rs` | 13 wiremock HTTP integration tests (ASR + summarization) |
 
 → Quality targets and coverage: [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md)
 → Frontend conventions: [docs/FRONTEND.md](docs/FRONTEND.md)
@@ -121,3 +132,18 @@ cd src-tauri && cargo test       # 72 Rust unit tests (needs system libs)
 > When a feature ships, move its exec-plan to `docs/exec-plans/completed/`
 > and update `docs/PLANS.md`. Keep `README.md` in sync with user-facing
 > changes (new setup steps, new settings, new features).
+
+### Mandatory doc checklist – include in every commit
+
+After every commit, verify each item that applies:
+
+- [ ] **New module or file** → add a row to the Key modules table above and update `ARCHITECTURE.md`
+- [ ] **New or renamed test file** → update the test counts and file table in the "Running tests" section
+- [ ] **New Tauri command** → add to `docs/references/tauri-commands-quickref.txt`
+- [ ] **New ASR backend** → follow the "Adding a new ASR backend" checklist above
+- [ ] **Feature shipped** → move exec-plan from `docs/exec-plans/active/` to `docs/exec-plans/completed/` and update `docs/PLANS.md`
+- [ ] **User-facing change** → update `README.md` (setup steps, settings, features)
+- [ ] **Coding convention added or changed** → update the relevant doc under `docs/` and the Quick rules section above
+
+> Commits that add code without updating affected docs are considered incomplete.
+> Reviewers should treat a missing doc update as a blocking issue.
