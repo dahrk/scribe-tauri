@@ -68,7 +68,7 @@ pub fn run() {
             let app_handle = app.handle().clone();
             let db_clone = db.clone();
             tokio::spawn(async move {
-                recorder::run_recorder(app_handle, db_clone, loaded_settings, cmd_rx).await;
+                recorder::run_recorder_with_app(app_handle, db_clone, loaded_settings, cmd_rx).await;
             });
 
             // ── System tray ──────────────────────────────────────────────────
