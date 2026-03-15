@@ -64,9 +64,20 @@ bun install && bun run tauri dev
 ## Running tests
 
 ```bash
-bun run test                         # 48 frontend tests
-cd src-tauri && cargo test       # 72 Rust unit tests (needs system libs)
+bun run test                         # 65 frontend tests (unit + integration)
+bun run test:integration             # integration tests only (App, recorder-flow)
+cd src-tauri && cargo test       # Rust unit tests + 13 integration tests (needs system libs)
 ```
+
+Test helpers and integration suites:
+
+| Path | Role |
+|---|---|
+| `src/test/helpers/ipc.ts` | Typed `setupInvoke()` / `setupListen()` IPC helpers |
+| `src/test/helpers/render.tsx` | `renderWithProviders()` wrapper for React tests |
+| `src/test/integration/App.test.tsx` | 12 full-`<App />` integration tests |
+| `src/test/integration/recorder-flow.test.ts` | 5 Idle→Recording→Idle state-machine tests |
+| `src-tauri/tests/integration.rs` | 13 wiremock HTTP integration tests (ASR + summarization) |
 
 → Quality targets and coverage: [docs/QUALITY_SCORE.md](docs/QUALITY_SCORE.md)
 → Frontend conventions: [docs/FRONTEND.md](docs/FRONTEND.md)
