@@ -132,3 +132,18 @@ Test helpers and integration suites:
 > When a feature ships, move its exec-plan to `docs/exec-plans/completed/`
 > and update `docs/PLANS.md`. Keep `README.md` in sync with user-facing
 > changes (new setup steps, new settings, new features).
+
+### Mandatory doc checklist – include in every commit
+
+After every commit, verify each item that applies:
+
+- [ ] **New module or file** → add a row to the Key modules table above and update `ARCHITECTURE.md`
+- [ ] **New or renamed test file** → update the test counts and file table in the "Running tests" section
+- [ ] **New Tauri command** → add to `docs/references/tauri-commands-quickref.txt`
+- [ ] **New ASR backend** → follow the "Adding a new ASR backend" checklist above
+- [ ] **Feature shipped** → move exec-plan from `docs/exec-plans/active/` to `docs/exec-plans/completed/` and update `docs/PLANS.md`
+- [ ] **User-facing change** → update `README.md` (setup steps, settings, features)
+- [ ] **Coding convention added or changed** → update the relevant doc under `docs/` and the Quick rules section above
+
+> Commits that add code without updating affected docs are considered incomplete.
+> Reviewers should treat a missing doc update as a blocking issue.
